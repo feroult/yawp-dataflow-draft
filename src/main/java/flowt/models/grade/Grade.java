@@ -10,4 +10,5 @@ public class Grade {
     @Id
     IdRef<Grade> id;
 
+    public Integer count = 0;
 }

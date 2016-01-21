@@ -5,7 +5,7 @@ import io.yawp.repository.annotations.Endpoint;
 import io.yawp.repository.annotations.Id;
 import io.yawp.repository.annotations.ParentId;
 
-@Endpoint(path = "/students-marker")
+@Endpoint(path = "/student-marker")
 public class StudentMarker {
 
     @Id
@@ -16,4 +16,11 @@ public class StudentMarker {
 
     Integer version;
 
+    public IdRef<Student> getStudentId() {
+        return studentId;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
 }

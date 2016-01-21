@@ -27,18 +27,18 @@ public class StudentPutAction extends Action<Student> {
         StudentMarker marker = createMarker(student);
         yawp.save(marker);
 
-        enqueueTasks(student, oldStudent);
+        enqueueTasks(marker, student, oldStudent);
 
         yawp.commit();
     }
 
-    private void enqueueTasks(Student student, Student oldStudent) {
+    private void enqueueTasks(StudentMarker marker, Student student, Student oldStudent) {
         if (hasChangedGrade(student, oldStudent)) {
             if (student.gradeId != null) {
-                addStudentTask(student);
+                addStudentTask(student, marker);
             }
             if (oldStudent != null && oldStudent.gradeId != null) {
-                removeStudentTask(oldStudent);
+                removeStudentTask(oldStudent, marker);
             }
         }
     }
@@ -69,16 +69,21 @@ public class StudentPutAction extends Action<Student> {
         return null;
     }
 
-    private void addStudentTask(Student student) {
+    private void addStudentTask(Student student, StudentMarker marker) {
         DatastoreService ds = DatastoreServiceFactory.getDatastoreService();
         Queue queue = QueueFactory.getDefaultQueue();
-        queue.add(TaskOptions.Builder.withUrl("/api/grades/add-student").payload(to(student)));
+
+        queue.add(TaskOptions.Builder.withUrl(actionUri(student, "add-student")).payload(to(marker)));
     }
 
-    private void removeStudentTask(Student student) {
+    private String actionUri(Student student, String action) {
+        return String.format("/api%s/%s", student.gradeId, action);
+    }
+
+    private void removeStudentTask(Student student, StudentMarker marker) {
         DatastoreService ds = DatastoreServiceFactory.getDatastoreService();
         Queue queue = QueueFactory.getDefaultQueue();
-        queue.add(TaskOptions.Builder.withUrl("/api/grades/remove-student").payload(to(student)));
+        queue.add(TaskOptions.Builder.withUrl(actionUri(student, "remove-student")).payload(to(marker)));
     }
 
     private StudentMarker createMarker(Student student) {
