@@ -10,26 +10,48 @@ import io.yawp.repository.IdRef;
 import io.yawp.repository.actions.Action;
 import io.yawp.repository.query.NoResultException;
 
+import java.util.ConcurrentModificationException;
+
 public class StudentPutAction extends Action<Student> {
 
     @POST
     public Student put(Student student) {
-        changeStudent(student);
+        int count = 1;
+        while (!changeStudent(student)) {
+            count++;
+            if (count > 5) {
+                System.out.println("max retries...");
+                return null;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
         return student;
     }
 
-    private void changeStudent(Student student) {
-        yawp.begin();
+    private boolean changeStudent(Student student) {
 
-        Student oldStudent = fetchOldStudent(student);
-        yawp.save(student);
+        try {
+            yawp.begin();
 
-        StudentMarker marker = createMarker(student);
-        yawp.save(marker);
+            Student oldStudent = fetchOldStudent(student);
+            yawp.save(student);
 
-        enqueueTasks(marker, student, oldStudent);
+            StudentMarker marker = createMarker(student);
+            yawp.save(marker);
 
-        yawp.commit();
+            enqueueTasks(marker, student, oldStudent);
+
+            yawp.commit();
+            return true;
+
+        } catch (ConcurrentModificationException e) {
+            yawp.rollback();
+        }
+        return false;
     }
 
     private void enqueueTasks(StudentMarker marker, Student student, Student oldStudent) {

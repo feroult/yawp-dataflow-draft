@@ -1,0 +1,35 @@
+{
+  "name": "flowt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "add-student.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:feroult/yawp-dataflow-draft.git"
+  },
+  "keywords": [
+    "appengine",
+    "yawp"
+  ],
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/feroult/yawp-dataflow-draft/issues"
+  },
+  "homepage": "https://github.com/feroult/yawp-dataflow-draft",
+  "devDependencies": {
+    "mockery": "^1.4.0"
+  },
+  "dependencies": {
+    "moment": "^2.9.0",
+    "moment-timezone": "^0.3.1",      
+    "async": "^1.5.2",
+    "request": "^2.53.0",
+    "sync-request": "^2.0.1"
+  }
+}

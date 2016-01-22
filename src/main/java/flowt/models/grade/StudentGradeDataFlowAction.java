@@ -18,13 +18,16 @@ import io.yawp.repository.actions.Action;
 import io.yawp.repository.query.NoResultException;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.List;
+import java.util.*;
 
 public class StudentGradeDataFlowAction extends Action<Grade> {
 
     public static final long POW_2_16 = (long) Math.pow(2, 16);
 
     public static final long POW_2_15 = (long) Math.pow(2, 15);
+
+    private Map<IdRef<GradeStudentMarker>, GradeStudentMarker> gradeStudentMarkerCache = new HashMap<>();
+    private Set<IdRef<GradeStudentMarker>> gradeStudentMarkersToSave = new HashSet<>();
 
     @POST
     public void addStudent(IdRef<Grade> id, StudentMarker studentMarker) {
@@ -69,9 +72,11 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
 
             String taskName = String.format("%s-%d-%d", id, now / 1000 / 30, index).replaceAll("/", "__");
 
-            System.out.println("adding: " + indexHash);
+
             queue.add(TaskOptions.Builder.withUrl("/api/grades/count-student-join").payload(joinPaylod(id, index, indexHash, lock))
                     .taskName(taskName).etaMillis(now + 1000));
+
+            System.out.println("join queue created: " + indexHash);
 
         } catch (TaskAlreadyExistsException e) {
 
@@ -110,11 +115,10 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
 
         Grade grade = fetchGrade(payload.id);
 
-        System.out.println("here");
+        System.out.println(payload.indexHash + " processing workers: " + works.size());
 
         for (Work work : works) {
-            System.out.println("working: " + work.getStudentMarker().getStudentId() + " - present: " + work.isPresent());
-            if (countStudentIfLastVersion(payload.id, work.getStudentMarker(), work.isPresent(), grade)) {
+            if (countStudentIfLastVersion(payload.indexHash, payload.id, work.getStudentMarker(), work.isPresent(), grade)) {
                 changed = true;
             }
         }
@@ -122,6 +126,11 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
         if (!changed) {
             yawp.rollback();
         } else {
+            // save markers
+            for(IdRef<GradeStudentMarker> id : gradeStudentMarkersToSave) {
+                yawp.save(gradeStudentMarkerCache.get(id));
+            }
+
             if (grade.count == 0) {
                 yawp.destroy(grade.id);
             } else {
@@ -141,11 +150,14 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
         return to(new JoinPayload(id, index, indexHash, lock));
     }
 
-    private boolean countStudentIfLastVersion(IdRef<Grade> id, StudentMarker studentMarker, boolean present, Grade grade) {
-        GradeStudentMarker gradeStudentMarker = fetchGradeStudentMarker(createGradeStudentMarkerId(id, studentMarker));
+    private boolean countStudentIfLastVersion(String indexHash, IdRef<Grade> id, StudentMarker studentMarker, boolean present, Grade grade) {
+        IdRef<GradeStudentMarker> gradeStudentMarkerId = createGradeStudentMarkerId(id, studentMarker);
+        GradeStudentMarker gradeStudentMarker = fetchGradeStudentMarker(gradeStudentMarkerId);
+
+        System.out.println(String.format("%s: student=%s, current=[%d, %b], existing=[%d, %b]",
+                indexHash, studentMarker.getStudentId(), studentMarker.getVersion(), present, gradeStudentMarker.version, gradeStudentMarker.present));
 
         if (gradeStudentMarker.version >= studentMarker.getVersion()) {
-            yawp.rollback();
             return false;
         }
 
@@ -159,26 +171,9 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
         gradeStudentMarker.present = present;
         gradeStudentMarker.version = studentMarker.getVersion();
 
-        yawp.save(gradeStudentMarker);
+        gradeStudentMarkerCache.put(gradeStudentMarkerId, gradeStudentMarker);
+        gradeStudentMarkersToSave.add(gradeStudentMarkerId);
         return true;
-    }
-
-    private void countStudentInGrade(IdRef<Grade> id, StudentMarker studentMarker, boolean present) {
-        yawp.begin();
-        Grade grade = fetchGrade(id);
-
-        if (!countStudentIfLastVersion(id, studentMarker, present, grade)) {
-            yawp.rollback();
-            return;
-        }
-
-        if (grade.count == 0) {
-            yawp.destroy(id);
-        } else {
-            yawp.save(grade);
-        }
-
-        yawp.commit();
     }
 
     private Grade fetchGrade(IdRef<Grade> id) {
@@ -192,6 +187,17 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
     }
 
     private GradeStudentMarker fetchGradeStudentMarker(IdRef<GradeStudentMarker> gradeStudentMarkerId) {
+
+        if (gradeStudentMarkerCache.containsKey(gradeStudentMarkerId)) {
+            return gradeStudentMarkerCache.get(gradeStudentMarkerId);
+        }
+
+        GradeStudentMarker gradeStudentMarker = fetchOrCreateGradeStudentMarker(gradeStudentMarkerId);
+        gradeStudentMarkerCache.put(gradeStudentMarkerId, gradeStudentMarker);
+        return gradeStudentMarker;
+    }
+
+    private GradeStudentMarker fetchOrCreateGradeStudentMarker(IdRef<GradeStudentMarker> gradeStudentMarkerId) {
         try {
             return gradeStudentMarkerId.fetch();
         } catch (NoResultException e) {
