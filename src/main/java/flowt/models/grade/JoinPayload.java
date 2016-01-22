@@ -13,6 +13,10 @@ public class JoinPayload {
 
     String lock;
 
+    public JoinPayload() {
+
+    }
+
     public JoinPayload(IdRef<Grade> id, Integer index, String indexHash, String lock) {
         this.id = id;
         this.index = index;

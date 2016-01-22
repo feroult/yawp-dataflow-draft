@@ -43,7 +43,7 @@ module.exports = (function () {
             yawp('/students').json(student).post('put').done(function () {
                 callback();
             }).fail(function(err) {
-               // console.log('fail?! ', err);
+                console.log('fail?! ', err);
                 callback();
             });
         }
