@@ -8,6 +8,7 @@ import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskAlreadyExistsException;
 import com.google.appengine.api.taskqueue.TaskOptions;
+import com.google.appengine.repackaged.com.google.common.base.Flag;
 import com.google.appengine.repackaged.org.apache.commons.codec.binary.Base64;
 import com.google.appengine.repackaged.org.apache.commons.codec.digest.DigestUtils;
 import flowt.models.student.StudentMarker;
@@ -68,7 +69,7 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
             String taskName = String.format("%s-%d-%d", id, now / 1000 / 30, index).replaceAll("/", "__");
 
             System.out.println("adding: " + indexHash);
-            queue.add(TaskOptions.Builder.withUrl("/api/grades/count-student-join").payload(indexHash)
+            queue.add(TaskOptions.Builder.withUrl("/api/grades/count-student-join").payload(joinPaylod(id, index, indexHash))
                     .taskName(taskName).etaMillis(now + 1000));
 
         } catch (TaskAlreadyExistsException e) {
@@ -81,8 +82,15 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
     }
 
     @POST
-    public void countStudentJoin(String indexHash) {
-        System.out.println("join: " + indexHash);
+    public void countStudentJoin(JoinPayload payload) {
+        System.out.println("join: " + payload.indexHash);
+
+        MemcacheService memcache = MemcacheServiceFactory.getMemcacheService();
+
+    }
+
+    private String joinPaylod(IdRef<Grade> id, Integer index, String indexHash) {
+        return to(new JoinPayload(id, index, indexHash));
     }
 
     private void countStudentInGrade(IdRef<Grade> id, StudentMarker studentMarker, boolean present) {
