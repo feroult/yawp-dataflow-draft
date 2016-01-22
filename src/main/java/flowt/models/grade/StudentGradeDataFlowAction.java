@@ -8,7 +8,6 @@ import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskAlreadyExistsException;
 import com.google.appengine.api.taskqueue.TaskOptions;
-import com.google.appengine.repackaged.com.google.common.base.Flag;
 import com.google.appengine.repackaged.org.apache.commons.codec.binary.Base64;
 import com.google.appengine.repackaged.org.apache.commons.codec.digest.DigestUtils;
 import flowt.models.student.StudentMarker;
@@ -19,11 +18,13 @@ import io.yawp.repository.actions.Action;
 import io.yawp.repository.query.NoResultException;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Map;
+import java.util.List;
 
 public class StudentGradeDataFlowAction extends Action<Grade> {
 
-    public static final double POW_2_16 = Math.pow(2, 16);
+    public static final long POW_2_16 = (long) Math.pow(2, 16);
+
+    public static final long POW_2_15 = (long) Math.pow(2, 15);
 
     @POST
     public void addStudent(IdRef<Grade> id, StudentMarker studentMarker) {
@@ -47,7 +48,7 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
 
         String lock = String.format("%s-lock-%d", id, index);
 
-        long writers = memcache.increment(lock, 1, (long) POW_2_16);
+        long writers = memcache.increment(lock, 1, POW_2_16);
 
         if (writers < POW_2_16) {
             System.out.println("lock?!");
@@ -55,8 +56,8 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
             return false;
         }
 
-        String indexHash = hash("" + index);
-        Work work = new Work(String.format("%s-%s", id, indexHash), studentMarker, present);
+        String indexHash = String.format("%s-%s", id, hash("" + index));
+        Work work = new Work(indexHash, studentMarker, present);
         yawp.save(work);
 
         long now = System.currentTimeMillis();
@@ -69,7 +70,7 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
             String taskName = String.format("%s-%d-%d", id, now / 1000 / 30, index).replaceAll("/", "__");
 
             System.out.println("adding: " + indexHash);
-            queue.add(TaskOptions.Builder.withUrl("/api/grades/count-student-join").payload(joinPaylod(id, index, indexHash))
+            queue.add(TaskOptions.Builder.withUrl("/api/grades/count-student-join").payload(joinPaylod(id, index, indexHash, lock))
                     .taskName(taskName).etaMillis(now + 1000));
 
         } catch (TaskAlreadyExistsException e) {
@@ -87,20 +88,65 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
 
         MemcacheService memcache = MemcacheServiceFactory.getMemcacheService();
 
-    }
+        memcache.increment("index-" + payload.id, 1);
+        memcache.increment(payload.lock, -1 * POW_2_15);
 
-    private String joinPaylod(IdRef<Grade> id, Integer index, String indexHash) {
-        return to(new JoinPayload(id, index, indexHash));
-    }
+        for (int i = 0; i < 20; i++) {
+            Long counter = (long) memcache.get(payload.lock);
+            if (counter == null || counter < POW_2_15) {
+                break;
+            }
+            try {
+                Thread.sleep(250);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
-    private void countStudentInGrade(IdRef<Grade> id, StudentMarker studentMarker, boolean present) {
+        List<Work> works = yawp(Work.class).where("index", "=", payload.indexHash).order("id").list();
+
+        boolean changed = false;
         yawp.begin();
-        Grade grade = fetchGrade(id);
+
+        Grade grade = fetchGrade(payload.id);
+
+        System.out.println("here");
+
+        for (Work work : works) {
+            System.out.println("working: " + work.getStudentMarker().getStudentId() + " - present: " + work.isPresent());
+            if (countStudentIfLastVersion(payload.id, work.getStudentMarker(), work.isPresent(), grade)) {
+                changed = true;
+            }
+        }
+
+        if (!changed) {
+            yawp.rollback();
+        } else {
+            if (grade.count == 0) {
+                yawp.destroy(grade.id);
+            } else {
+                yawp.save(grade);
+            }
+            yawp.commit();
+        }
+
+        // delete
+        for (Work work : works) {
+            yawp.destroy(work.getId());
+        }
+
+    }
+
+    private String joinPaylod(IdRef<Grade> id, Integer index, String indexHash, String lock) {
+        return to(new JoinPayload(id, index, indexHash, lock));
+    }
+
+    private boolean countStudentIfLastVersion(IdRef<Grade> id, StudentMarker studentMarker, boolean present, Grade grade) {
         GradeStudentMarker gradeStudentMarker = fetchGradeStudentMarker(createGradeStudentMarkerId(id, studentMarker));
 
         if (gradeStudentMarker.version >= studentMarker.getVersion()) {
             yawp.rollback();
-            return;
+            return false;
         }
 
         if (gradeStudentMarker.present) {
@@ -114,6 +160,17 @@ public class StudentGradeDataFlowAction extends Action<Grade> {
         gradeStudentMarker.version = studentMarker.getVersion();
 
         yawp.save(gradeStudentMarker);
+        return true;
+    }
+
+    private void countStudentInGrade(IdRef<Grade> id, StudentMarker studentMarker, boolean present) {
+        yawp.begin();
+        Grade grade = fetchGrade(id);
+
+        if (!countStudentIfLastVersion(id, studentMarker, present, grade)) {
+            yawp.rollback();
+            return;
+        }
 
         if (grade.count == 0) {
             yawp.destroy(id);

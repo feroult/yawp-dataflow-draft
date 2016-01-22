@@ -21,9 +21,25 @@ public class Work {
 
     Boolean present;
 
+    public Work() {
+
+    }
+
     public Work(String index, StudentMarker studentMarker, boolean present) {
         this.index = index;
         this.studentMarker = studentMarker;
         this.present = present;
+    }
+
+    public StudentMarker getStudentMarker() {
+        return studentMarker;
+    }
+
+    public boolean isPresent() {
+        return present;
+    }
+
+    public IdRef<Work> getId() {
+        return id;
     }
 }
