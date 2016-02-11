@@ -9,7 +9,7 @@
     <packaging>war</packaging>
 
     <properties>
-        <yawp.version>1.4.2</yawp.version>
+        <yawp.version>1.4.4-SNAPSHOT</yawp.version>
         <yawp.package>flowt</yawp.package>
         <appengine.app.version>1</appengine.app.version>
         <appengine.target.version>1.9.25</appengine.target.version>

@@ -39,8 +39,8 @@ module.exports = (function () {
             };
 
             console.log('student ->', student);
-            
-            yawp('/students').json(student).post('put').done(function () {
+
+            yawp('/students').create(student).done(function () {
                 callback();
             }).fail(function(err) {
                 console.log('fail?! ', err);
