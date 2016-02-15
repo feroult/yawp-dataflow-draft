@@ -62,7 +62,7 @@
         <url-pattern>/_ah/pipeline/*</url-pattern>
     </servlet-mapping>
 
-    <!-- security-constraint>
+    <security-constraint>
         <web-resource-collection>
             <web-resource-name>flowt-all</web-resource-name>
             <url-pattern>/*</url-pattern>
@@ -94,5 +94,5 @@
             <web-resource-name>flowt-tests</web-resource-name>
             <url-pattern>/test/*</url-pattern>
         </web-resource-collection>
-    </security-constraint -->
+    </security-constraint>
 </web-app>
