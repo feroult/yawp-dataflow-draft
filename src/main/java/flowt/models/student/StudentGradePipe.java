@@ -10,6 +10,11 @@ public class StudentGradePipe extends Pipe<Student, Grade> {
     }
 
     @Override
+    public void clear(Grade grade) {
+        grade.count = 0;
+    }
+
+    @Override
     public void flux(Student student, Grade grade) {
         grade.count++;
     }
