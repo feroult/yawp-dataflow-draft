@@ -11,4 +11,12 @@ public class Grade {
     IdRef<Grade> id;
 
     public Integer count = 0;
+
+    public IdRef<Grade> getId() {
+        return id;
+    }
+
+    public Integer getCount() {
+        return count;
+    }
 }
