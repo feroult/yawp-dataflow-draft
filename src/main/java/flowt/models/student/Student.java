@@ -15,6 +15,8 @@ public class Student {
     @Index
     IdRef<Grade> gradeId;
 
+    Integer score;
+
     public IdRef<Student> getId() {
         return id;
     }

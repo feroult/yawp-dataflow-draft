@@ -33,9 +33,11 @@ module.exports = (function () {
             var studentId = getRandomInt(1, totalStudents);
             var gradeId = getRandomInt(1, totalGrades);
 
+
             var student = {
                 id: '/students/' + studentId,
-                gradeId: '/grades/' + gradeId
+                gradeId: '/grades/' + gradeId,
+                score: getRandomInt(1, 10)
             };
 
             console.log('student ->', student);
