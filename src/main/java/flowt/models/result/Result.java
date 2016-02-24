@@ -10,7 +10,9 @@ public class Result {
     @Id
     IdRef<Result> id;
 
-    Integer threshold;
+    Integer max;
+
+    Integer min;
 
     Integer count = 0;
 
@@ -40,5 +42,13 @@ public class Result {
     @Override
     public int hashCode() {
         return id != null ? id.hashCode() : 0;
+    }
+
+    public boolean contains(Integer score) {
+        return score <= max && score >= min;
+    }
+
+    public boolean isRangeDifferent(Result oldResult) {
+        return max != oldResult.max || min != oldResult.min;
     }
 }

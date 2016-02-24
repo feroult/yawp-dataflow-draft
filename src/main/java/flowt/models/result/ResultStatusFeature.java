@@ -5,8 +5,6 @@ import io.yawp.repository.IdRef;
 import io.yawp.repository.query.NoResultException;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 public class ResultStatusFeature extends Feature {
@@ -14,7 +12,7 @@ public class ResultStatusFeature extends Feature {
     public Result getResultFor(Integer score) {
         List<Result> results = all();
         for (Result result : results) {
-            if (score >= result.threshold) {
+            if (result.contains(score)) {
                 return result;
             }
         }
@@ -35,18 +33,13 @@ public class ResultStatusFeature extends Feature {
             } catch (NoResultException e) {
                 result = new Result();
                 result.id = id;
-                result.threshold = status.defaultThreshold();
+                result.max = status.defaultMax();
+                result.min = status.defaultMin();
                 yawp.save(result);
             }
             results.add(result);
         }
 
-        Collections.sort(results, new Comparator<Result>() {
-            @Override
-            public int compare(Result o1, Result o2) {
-                return o2.threshold.compareTo(o1.threshold);
-            }
-        });
 
         return results;
     }
