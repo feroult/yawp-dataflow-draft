@@ -24,7 +24,7 @@ public enum Status {
     }, REPROVED {
         @Override
         public Integer defaultMax() {
-            return 3;
+            return 2;
         }
 
         @Override
