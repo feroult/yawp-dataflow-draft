@@ -4,8 +4,7 @@ import flowt.models.grade.Grade;
 import io.yawp.repository.pipes.Pipe;
 
 public class StudentGradePipe extends Pipe<Student, Grade> {
-
-
+    
     @Override
     public void configureSinks(Student student) {
         addSinkId(student.gradeId);
