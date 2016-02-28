@@ -13,7 +13,7 @@ public class ScoreResultPipe extends Pipe<Score, Result> {
 
     @Override
     public void configureSinks(Score score) {
-        addSinkId(feature(ResultStatusFeature.class).getResultFor(getScoreValue(score)).getId());
+        addSinkIds(feature(ResultStatusFeature.class).getResultsFor(getScoreValue(score)));
     }
 
     @Override

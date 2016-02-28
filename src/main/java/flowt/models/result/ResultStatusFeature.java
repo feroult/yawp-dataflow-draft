@@ -9,14 +9,17 @@ import java.util.List;
 
 public class ResultStatusFeature extends Feature {
 
-    public Result getResultFor(Integer score) {
+    public List<IdRef<Result>> getResultsFor(Integer score) {
+
+        List<IdRef<Result>> resultsForScore = new ArrayList<>();
+
         List<Result> results = all();
         for (Result result : results) {
             if (result.contains(score)) {
-                return result;
+                resultsForScore.add(result.getId());
             }
         }
-        return results.get(results.size() - 1);
+        return resultsForScore;
     }
 
     private List<Result> all() {
