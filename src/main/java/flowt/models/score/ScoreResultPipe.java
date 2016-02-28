@@ -12,8 +12,26 @@ import java.util.List;
 public class ScoreResultPipe extends Pipe<Score, Result> {
 
     @Override
-    public IdRef<Result> sinkId(Score score) {
-        return feature(ResultStatusFeature.class).getResultFor(getScoreValue(score)).getId();
+    public void configureSinks(Score score) {
+        addSinkId(feature(ResultStatusFeature.class).getResultFor(getScoreValue(score)).getId());
+    }
+
+    @Override
+    public void configureSources(Result result) {
+        List<Score> scores = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            if (!result.contains(i)) {
+                continue;
+            }
+
+            IdRef<Score> id = id(Score.class, new Long(i));
+            try {
+                Score score = id.fetch();
+                scores.add(score);
+            } catch (NoResultException e) {
+            }
+        }
+        addSources(scores);
     }
 
     @Override
@@ -29,24 +47,6 @@ public class ScoreResultPipe extends Pipe<Score, Result> {
     @Override
     public boolean reflowCondition(Result newResult, Result oldResult) {
         return newResult.isRangeDifferent(oldResult);
-    }
-
-    @Override
-    public List<Score> sources(Result result) {
-        List<Score> scores = new ArrayList<>();
-        for (int i = 1; i <= 10; i++) {
-            if (!result.contains(i)) {
-                continue;
-            }
-
-            IdRef<Score> id = id(Score.class, new Long(i));
-            try {
-                Score score = id.fetch();
-                scores.add(score);
-            } catch (NoResultException e) {
-            }
-        }
-        return scores;
     }
 
     private int getScoreValue(Score score) {

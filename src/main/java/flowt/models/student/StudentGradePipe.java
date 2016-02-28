@@ -1,15 +1,14 @@
 package flowt.models.student;
 
 import flowt.models.grade.Grade;
-import io.yawp.repository.IdRef;
 import io.yawp.repository.pipes.Pipe;
 
 public class StudentGradePipe extends Pipe<Student, Grade> {
 
 
     @Override
-    public IdRef<Grade> sinkId(Student student) {
-        return student.gradeId;
+    public void configureSinks(Student student) {
+        addSinkId(student.gradeId);
     }
 
     @Override

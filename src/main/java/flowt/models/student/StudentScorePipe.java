@@ -1,17 +1,16 @@
 package flowt.models.student;
 
 import flowt.models.score.Score;
-import io.yawp.repository.IdRef;
 import io.yawp.repository.pipes.Pipe;
 
 public class StudentScorePipe extends Pipe<Student, Score> {
 
     @Override
-    public IdRef<Score> sinkId(Student student) {
+    public void configureSinks(Student student) {
         if (student.score == null) {
-            return null;
+            return;
         }
-        return id(Score.class, student.score.longValue());
+        addSinkId(id(Score.class, student.score.longValue()));
     }
 
     @Override
